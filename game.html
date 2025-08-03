@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>中国象棋 - 游戏进行中</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #c43c2e;
+            --secondary-color: #d9b382;
+            --dark-bg: #2a211c;
+            --light-bg: #f5f0e5;
+            --board-bg: #e6c99c;
+            --border-color: #8c5e3c;
+            --text-dark: #3c2a1e;
+            --text-light: #f8f3e6;
+            --shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            --transition: all 0.3s ease;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: 'Microsoft YaHei', 'Heiti SC', 'SimSun', sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #d9b382 0%, #8c5e3c 100%);
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%238c5e3c" opacity="0.1"/><path d="M0,0 Q50,10 100,0 T100,100 Q50,90 0,100 T0,0 Z" fill="%23d9b382" opacity="0.1"/></svg>');
+            color: var(--text-dark);
+            position: relative;
+            overflow-x: hidden;
+            padding-bottom: 20px;
+        }
+        header {
+            background: var(--dark-bg);
+            padding: 15px 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .game-title {
+            color: white;
+            font-size: clamp(1.5rem, 3vw, 1.8rem);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            letter-spacing: 2px;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            flex: 1;
+        }
+        .board-container {
+            background: var(--dark-bg);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 3px solid var(--border-color);
+            flex: 1;
+            min-width: 320px;
+            max-width: 600px;
+            position: relative;
+            margin: 0 auto;
+        }
+        #board {
+            width: 100%;
+            aspect-ratio: 9/10;
+            min-height: 320px;
+            background-color: var(--board-bg);
+            background-image: 
+                linear-gradient(to right, rgba(0,0,0,0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0,0,0,0.1) 1px, transparent 1px);
+            background-size: 11.11% 11.11%;
+        }
+        .controls-panel {
+            background: var(--dark-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 3px solid var(--border-color);
+            flex: 1;
+            min-width: 300px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .panel-header {
+            color: var(--text-light);
+            font-size: 1.6rem;
+            margin-bottom: 20px;
+            font-weight: 600;
+            position: relative;
+            text-align: center;
+        }
+        .panel-header:after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 3px;
+            background: var(--primary-color);
+            border-radius: 3px;
+        }
+        .info-box {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color);
+            color: var(--text-light);
+            margin-bottom: 20px;
+        }
+        #player-info {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #status {
+            color: var(--secondary-color);
+            font-size: 1.1rem;
+            font-weight: bold;
+            min-height: 24px;
+        }
+        #room-id-display {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            word-break: break-all;
+            position: relative;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background-color 0.2s ease;
+            margin-bottom: 20px;
+        }
+        #room-id-display:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        #copy-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+            opacity: 0.8;
+        }
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        button {
+            padding: 14px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        #restart-btn, #leave-btn, #undo-btn {
+            color: white;
+        }
+        #restart-btn { background: linear-gradient(to bottom, #ff9800, #f57c00); }
+        #restart-btn:hover:not(:disabled) { background: linear-gradient(to bottom, #ffa726, #fb8c00); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4); }
+        #leave-btn { background: linear-gradient(to bottom, #f44336, #d32f2f); }
+        #leave-btn:hover:not(:disabled) { background: linear-gradient(to bottom, #ef5350, #e53935); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4); }
+        #undo-btn { background: linear-gradient(to bottom, #6c757d, #5a6268); }
+        #undo-btn:hover:not(:disabled) { background: linear-gradient(to bottom, #868e96, #6c757d); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4); }
+        button:disabled {
+            background: #9e9e9e;
+            cursor: not-allowed;
+            opacity: 0.7;
+            transform: none;
+            box-shadow: none;
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translate(-50%, 10px);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .hidden { 
+            display: none !important; 
+        }
+        .player-color {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            vertical-align: middle;
+        }
+        .red-player { background: #c43c2e; border: 1px solid #ff7b7b; }
+        .black-player { background: #333; border: 1px solid #888; }
+        .river-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(0deg);
+            width: 80%;
+            height: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+            color: #8c5e3c;
+            font-weight: bold;
+            font-size: clamp(1rem, 3vw, 1.5rem);
+            opacity: 0.7;
+        }
+        .board-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            border-radius: 8px;
+        }
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .library-status {
+            color: var(--text-light);
+            text-align: center;
+            padding: 10px;
+            font-size: 0.9rem;
+        }
+        
+        /* 响应式优化 */
+        @media (max-width: 900px) {
+            .container { 
+                flex-direction: column; 
+                align-items: center; 
+            }
+            .controls-panel, .board-container { 
+                width: 100%; 
+                max-width: 500px; 
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .game-title { font-size: 1.5rem; }
+            .panel-header { font-size: 1.4rem; }
+            .btn-group { flex-direction: row; }
+            button { flex: 1; font-size: 1rem; padding: 12px; }
+            header { padding: 12px 15px; }
+            .container { padding: 15px; }
+            .controls-panel { padding: 15px; }
+            #player-info, #status { font-size: 1rem; }
+            #room-id-display { padding: 12px; font-size: 1rem; }
+            .board-container {
+                min-width: 280px;
+                padding: 10px;
+            }
+            #board {
+                min-height: 280px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .panel-header { font-size: 1.3rem; }
+            button { padding: 12px; font-size: 0.95rem; }
+            #player-info, #status { font-size: 0.95rem; }
+            .btn-group { flex-direction: column; }
+            .board-container {
+                min-width: 260px;
+                padding: 8px;
+            }
+            #board {
+                min-height: 260px;
+            }
+        }
+        
+        @media (max-width: 360px) {
+            .board-container { 
+                padding: 8px; 
+                min-width: 240px;
+            }
+            .controls-panel { 
+                padding: 15px 8px; 
+                min-width: 280px;
+            }
+            #board { 
+                min-height: 240px; 
+            }
+            .game-title {
+                font-size: 1.3rem;
+            }
+        }
+        
+        @media (orientation: landscape) and (max-height: 500px) {
+            .container { 
+                flex-direction: row; 
+                gap: 15px;
+            }
+            .board-container, .controls-panel { 
+                max-width: 50%; 
+                height: 80vh; 
+            }
+            #board { 
+                min-height: 280px; 
+                height: 100%; 
+            }
+            .controls-panel { 
+                overflow-y: auto; 
+                padding: 15px;
+            }
+            header {
+                padding: 10px 15px;
+            }
+            .game-title {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 class="game-title">中国象棋</h1>
+        <button id="leave-btn" style="padding: 8px 15px; font-size: 0.9rem;">
+            <i class="fas fa-sign-out-alt"></i> 退出房间
+        </button>
+    </header>
+    
+    <div class="container">
+        <div class="board-container">
+            <div id="board"></div>
+            <div class="river-text">
+                <div class="chuhe">楚河</div>
+                <div class="hanjie">汉界</div>
+            </div>
+            <div id="board-loading" class="loading-overlay">
+                <div class="loading-spinner"></div>
+                <div class="library-status" style="position: absolute; top: 70%; color: white;">正在加载游戏组件...</div>
+            </div>
+        </div>
+        
+        <div class="controls-panel">
+            <h2 class="panel-header">游戏控制</h2>
+            
+            <div class="info-box">
+                <div id="player-info">
+                    <span id="player-color-indicator" class="player-color"></span>
+                    <span id="player-role"></span>
+                </div>
+                <div id="status">正在连接游戏...</div>
+            </div>
+            
+            <div id="room-id-display">
+                房间码：<span id="room-id">加载中...</span>
+                <i id="copy-icon" class="fas fa-copy"></i>
+            </div>
+            
+            <div class="btn-group">
+                <button id="restart-btn" disabled>
+                    <i class="fas fa-redo"></i> 请求重开
+                </button>
+                <button id="undo-btn" disabled>
+                    <i class="fas fa-undo"></i> 请求悔棋
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast"></div>
+    
+    <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
+    <script>
+        // 页面元素引用
+        const ui = {
+            playerInfo: document.getElementById('player-info'),
+            playerRole: document.getElementById('player-role'),
+            playerColorIndicator: document.getElementById('player-color-indicator'),
+            status: document.getElementById('status'),
+            roomIdDisplay: document.getElementById('room-id-display'),
+            roomId: document.getElementById('room-id'),
+            restartBtn: document.getElementById('restart-btn'),
+            undoBtn: document.getElementById('undo-btn'),
+            leaveBtn: document.getElementById('leave-btn'),
+            toast: document.getElementById('toast'),
+            board: document.getElementById('board'),
+            boardLoading: document.getElementById('board-loading'),
+            libraryStatus: document.querySelector('.library-status')
+        };
+        
+        // 游戏状态
+        const gameState = {
+            ably: null,
+            channel: null,
+            game: null,
+            board: null,
+            playerColor: '',
+            isMyTurn: false,
+            gameStarted: false,
+            roomId: '',
+            libraryLoadAttempts: 0,
+            maxLoadAttempts: 3,
+            librariesLoaded: false
+        };
+        
+        // Ably API 配置
+        const ABLY_API_KEY = 'nc5NGw.wSmsXg:SMs5pD5aJ4hGMvNZnd7pJp2lYS2X1iCmWm_yeLx_pkk';
+        
+        // 显示提示消息
+        function showToast(message, type = 'info') {
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+            ui.toast.innerHTML = `<i class="fas ${icons[type]}"></i> ${message}`;
+            ui.toast.className = 'toast show';
+            
+            setTimeout(() => {
+                ui.toast.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 复制房间码
+        function copyRoomId() {
+            const roomIdText = ui.roomId.textContent.trim();
+            if (!roomIdText) return;
+            navigator.clipboard.writeText(roomIdText).then(() => {
+                showToast('房间码已复制', 'success');
+            }).catch(err => {
+                showToast('复制失败，请手动复制', 'error');
+                console.error('复制失败:', err);
+            });
+        }
+        
+        // 设置游戏按钮状态
+        function setGameButtonsDisabled(disabled) {
+            ui.restartBtn.disabled = disabled;
+            ui.undoBtn.disabled = disabled;
+        }
+        
+        // 退出房间
+        function leaveRoom() {
+            if (confirm("确定要退出房间吗？")) {
+                if (gameState.channel) {
+                    gameState.channel.presence.leave();
+                    gameState.channel.detach();
+                }
+                window.location.href = 'index.html';
+            }
+        }
+        
+        // 动态加载游戏库
+        function loadGameLibraries() {
+            return new Promise((resolve, reject) => {
+                if (gameState.librariesLoaded) {
+                    resolve();
+                    return;
+                }
+                
+                // 检查是否已加载
+                if (typeof Xiangqi !== 'undefined' && typeof XiangqiBoard !== 'undefined') {
+                    gameState.librariesLoaded = true;
+                    resolve();
+                    return;
+                }
+                
+                // 加载xiangqi库
+                const xiangqiScript = document.createElement('script');
+                xiangqiScript.src = 'https://cdn.jsdelivr.net/npm/xiangqi@0.1.0/dist/xiangqi.min.js';
+                xiangqiScript.onload = () => {
+                    // 加载chessboard-xiangqi库
+                    const boardScript = document.createElement('script');
+                    boardScript.src = 'https://cdn.jsdelivr.net/npm/chessboard-xiangqi@1.0.2/dist/chessboard-xiangqi.min.js';
+                    boardScript.onload = () => {
+                        gameState.librariesLoaded = true;
+                        resolve();
+                    };
+                    boardScript.onerror = () => {
+                        reject(new Error('Failed to load chessboard-xiangqi library'));
+                    };
+                    document.body.appendChild(boardScript);
+                };
+                xiangqiScript.onerror = () => {
+                    reject(new Error('Failed to load xiangqi library'));
+                };
+                document.body.appendChild(xiangqiScript);
+            });
+        }
+        
+        // 初始化棋盘
+        function initializeBoard() {
+            try {
+                // 确保XiangqiBoard库已加载
+                if (typeof XiangqiBoard === 'undefined') {
+                    throw new Error('棋盘库未加载');
+                }
+                
+                const config = {
+                    pieceTheme: 'https://cdn.jsdelivr.net/npm/chessboard-xiangqi@1.0.2/dist/img/pieces/traditional/{piece}.svg',
+                    position: 'start',
+                    orientation: gameState.playerColor === 'w' ? 'red' : 'black',
+                    draggable: true,
+                    onDragStart: onDragStart,
+                    onDrop: onDrop,
+                    onSnapEnd: () => {
+                        if (gameState.board) {
+                            gameState.board.position(gameState.game.fen());
+                        }
+                    }
+                };
+                
+                // 创建棋盘实例
+                gameState.board = XiangqiBoard('board', config);
+                
+                // 确保棋盘正确缩放
+                const resizeBoard = () => {
+                    if (gameState.board) {
+                        gameState.board.resize();
+                        // 确保棋盘刷新
+                        gameState.board.position('start');
+                    }
+                };
+                
+                // 初始调整
+                setTimeout(resizeBoard, 100);
+                
+                // 监听窗口大小变化，调整棋盘
+                window.addEventListener('resize', resizeBoard);
+                
+                // 显示初始棋子
+                if (gameState.game) {
+                    gameState.board.position(gameState.game.fen());
+                }
+                
+                showToast('棋盘已准备就绪', 'success');
+                ui.boardLoading.style.display = 'none';
+                
+            } catch (error) {
+                console.error('初始化棋盘失败:', error);
+                showToast('棋盘初始化失败，正在重试...', 'error');
+                
+                // 重试初始化
+                if (gameState.libraryLoadAttempts < gameState.maxLoadAttempts) {
+                    gameState.libraryLoadAttempts++;
+                    setTimeout(initializeBoard, 2000);
+                } else {
+                    ui.libraryStatus.textContent = '加载失败，请刷新页面重试';
+                    showToast('游戏组件加载失败，请刷新页面', 'error');
+                }
+            }
+        }
+        
+        // 拖动开始时的验证
+        function onDragStart(source, piece) {
+            // 只有轮到自己且游戏已开始，并且是自己的棋子才能拖动
+            return gameState.isMyTurn && gameState.gameStarted && piece.charAt(0) === gameState.playerColor;
+        }
+        
+        // 放置棋子时的处理
+        function onDrop(source, target) {
+            // 尝试移动棋子
+            const moveData = { from: source, to: target };
+            const move = gameState.game.move(moveData);
+            
+            // 如果移动无效，棋子返回原位置
+            if (move === null) return 'snapback';
+            
+            // 移动有效，更新游戏状态
+            gameState.isMyTurn = false;
+            updateStatus();
+            
+            // 向对手发送移动信息
+            if (gameState.channel) {
+                gameState.channel.publish({ 
+                    name: 'move', 
+                    data: { type: 'move', move: moveData } 
+                });
+            }
+        }
+        
+        // 更新游戏状态显示
+        function updateStatus() {
+            if (!gameState.game) return;
+            
+            const moveColor = gameState.game.turn() === 'w' ? '红方' : '黑方';
+            let statusText = '';
+            
+            if (gameState.game.game_over()) {
+                setGameButtonsDisabled(true);
+                if (gameState.game.in_checkmate()) {
+                    statusText = `游戏结束, ${moveColor}被将死！`;
+                    showToast(statusText, 'success');
+                } else if (gameState.game.in_draw()) {
+                    statusText = '游戏结束, 平局！';
+                    showToast(statusText, 'info');
+                }
+            } else {
+                statusText = gameState.isMyTurn ? 
+                    `轮到你走棋 (${moveColor})` : 
+                    `等待对方 (${moveColor}) 走棋...`;
+                
+                if (gameState.game.in_check()) {
+                    statusText += ' (将军!)';
+                    showToast(statusText, 'warning');
+                }
+            }
+            
+            ui.status.textContent = statusText;
+        }
+        
+        // 请求重新开始游戏
+        function requestRestart() {
+            if (!gameState.channel || !gameState.gameStarted) { 
+                showToast('未连接到对手', 'error'); 
+                return; 
+            }
+            
+            if(confirm("确定要向对方发送重开请求吗？")){
+                gameState.channel.publish({ 
+                    name: 'restart_request', 
+                    data: { type: 'restart_request' }
+                });
+                showToast('已发送重开请求', 'info');
+            }
+        }
+        
+        // 处理重开请求
+        function handleRestartRequest() {
+            if (confirm("对方请求重新开始游戏，是否同意？")) {
+                // 重置游戏状态
+                gameState.game.reset();
+                gameState.board.position('start');
+                gameState.isMyTurn = gameState.playerColor === 'w';
+                updateStatus();
+                
+                // 通知对方已接受重开
+                gameState.channel.publish({ 
+                    name: 'restart_accept', 
+                    data: { type: 'restart_accept' }
+                });
+                
+                showToast('游戏已重新开始', 'success');
+            } else {
+                // 通知对方已拒绝重开
+                gameState.channel.publish({ 
+                    name: 'restart_reject', 
+                    data: { type: 'restart_reject' }
+                });
+            }
+        }
+        
+        // 处理重开接受
+        function handleRestartAccept() {
+            gameState.game.reset();
+            gameState.board.position('start');
+            gameState.isMyTurn = gameState.playerColor === 'w';
+            updateStatus();
+            showToast('对方同意重开，游戏已重新开始', 'success');
+        }
+        
+        // 处理重开拒绝
+        function handleRestartReject() {
+            showToast('对方拒绝了重开请求', 'info');
+        }
+        
+        // 请求悔棋
+        function requestUndo() {
+            if (!gameState.channel || !gameState.gameStarted) { 
+                showToast('未连接到对手', 'error'); 
+                return; 
+            }
+            
+            if (gameState.isMyTurn) {
+                showToast('当前是你的回合，不能悔棋', 'warning');
+                return;
+            }
+            
+            gameState.channel.publish({ 
+                name: 'undo_request', 
+                data: { type: 'undo_request' }
+            });
+            showToast('已发送悔棋请求', 'info');
+        }
+        
+        // 处理悔棋请求
+        function handleUndoRequest() {
+            if (confirm("对方请求悔棋，是否同意？")) {
+                // 撤销上一步
+                gameState.game.undo();
+                gameState.board.position(gameState.game.fen());
+                gameState.isMyTurn = !gameState.isMyTurn;
+                updateStatus();
+                
+                // 通知对方已接受悔棋
+                gameState.channel.publish({ 
+                    name: 'undo_accept', 
+                    data: { type: 'undo_accept' }
+                });
+                
+                showToast('已同意悔棋', 'info');
+            } else {
+                // 通知对方已拒绝悔棋
+                gameState.channel.publish({ 
+                    name: 'undo_reject', 
+                    data: { type: 'undo_reject' }
+                });
+            }
+        }
+        
+        // 处理悔棋接受
+        function handleUndoAccept() {
+            gameState.game.undo();
+            gameState.board.position(gameState.game.fen());
+            gameState.isMyTurn = !gameState.isMyTurn;
+            updateStatus();
+            showToast('对方同意悔棋', 'info');
+        }
+        
+        // 处理悔棋拒绝
+        function handleUndoReject() {
+            showToast('对方拒绝了悔棋请求', 'info');
+        }
+        
+        // 初始化游戏
+        async function initGame() {
+            // 从URL获取参数
+            const urlParams = new URLSearchParams(window.location.search);
+            gameState.roomId = urlParams.get('roomId') || '';
+            gameState.playerColor = urlParams.get('playerColor') || '';
+            
+            // 验证参数
+            if (!gameState.roomId || !gameState.playerColor || !['w', 'b'].includes(gameState.playerColor)) {
+                showToast('房间参数错误', 'error');
+                setTimeout(() => window.location.href = 'index.html', 2000);
+                return;
+            }
+            
+            // 显示房间ID
+            ui.roomId.textContent = gameState.roomId;
+            
+            // 设置玩家信息
+            const role = gameState.playerColor === 'w' ? '红方 (先手)' : '黑方 (后手)';
+            ui.playerRole.textContent = role;
+            ui.playerColorIndicator.className = `player-color ${gameState.playerColor === 'w' ? 'red-player' : 'black-player'}`;
+            
+            // 显示加载状态
+            ui.boardLoading.style.display = 'flex';
+            
+            try {
+                // 加载游戏库
+                await loadGameLibraries();
+                
+                // 初始化游戏逻辑
+                gameState.game = new Xiangqi();
+                
+                // 初始化棋盘
+                initializeBoard();
+                
+                // 连接Ably
+                gameState.ably = new Ably.Realtime({ 
+                    key: ABLY_API_KEY,
+                    autoConnect: true
+                });
+                
+                // 监听连接状态
+                gameState.ably.connection.on('connected', () => {
+                    showToast('已连接到游戏服务器', 'success');
+                    ui.status.textContent = '正在加入房间...';
+                    
+                    // 加入房间频道
+                    gameState.channel = gameState.ably.channels.get(gameState.roomId);
+                    
+                    // 监听频道状态
+                    gameState.channel.on('attached', () => {
+                        showToast('已加入房间', 'success');
+                        
+                        // 进入房间并通知其他玩家
+                        gameState.channel.presence.enter({ 
+                            color: gameState.playerColor,
+                            clientId: gameState.ably.connection.id
+                        }, (err) => {
+                            if (err) {
+                                showToast(`加入房间失败: ${err.message}`, 'error');
+                                console.error('加入房间失败:', err);
+                                return;
+                            }
+                            
+                            // 获取当前房间成员
+                            gameState.channel.presence.get((err, members) => {
+                                if (err) {
+                                    console.error('获取房间成员失败:', err);
+                                    return;
+                                }
+                                
+                                // 检查是否已有两个玩家
+                                if (members.length >= 2) {
+                                    ui.status.textContent = '对手已在房间内，游戏开始！';
+                                    gameState.gameStarted = true;
+                                    gameState.isMyTurn = gameState.playerColor === 'w';
+                                    setGameButtonsDisabled(false);
+                                    updateStatus();
+                                    
+                                    // 确保棋盘已显示棋子
+                                    if (gameState.board) {
+                                        gameState.board.position('start');
+                                    }
+                                } else {
+                                    ui.status.textContent = '等待对手加入...';
+                                    showToast('等待对手加入房间...', 'info');
+                                }
+                            });
+                        });
+                        
+                        // 监听其他玩家加入
+                        gameState.channel.presence.subscribe('enter', (presenceMsg) => {
+                            // 忽略自己
+                            if (presenceMsg.clientId !== gameState.ably.connection.id) {
+                                ui.status.textContent = '对手已加入，游戏开始！';
+                                gameState.gameStarted = true;
+                                gameState.isMyTurn = gameState.playerColor === 'w';
+                                setGameButtonsDisabled(false);
+                                updateStatus();
+                                showToast('对手已加入，游戏开始！', 'success');
+                                
+                                // 对手加入后确保棋子显示
+                                if (gameState.board) {
+                                    gameState.board.position('start');
+                                }
+                            }
+                        });
+                        
+                        // 监听其他玩家离开
+                        gameState.channel.presence.subscribe('leave', (presenceMsg) => {
+                            if (presenceMsg.clientId !== gameState.ably.connection.id) {
+                                ui.status.textContent = '对手已离开房间';
+                                gameState.gameStarted = false;
+                                setGameButtonsDisabled(true);
+                                showToast('对手已离开房间', 'error');
+                            }
+                        });
+                        
+                        // 监听游戏消息
+                        gameState.channel.subscribe('move', (msg) => {
+                            if (msg.data && msg.data.type === 'move' && msg.data.move) {
+                                // 应用对方的移动
+                                gameState.game.move(msg.data.move);
+                                if (gameState.board) {
+                                    gameState.board.position(gameState.game.fen());
+                                }
+                                gameState.isMyTurn = true;
+                                updateStatus();
+                            }
+                        });
+                        
+                        // 监听重开请求
+                        gameState.channel.subscribe('restart_request', handleRestartRequest);
+                        
+                        // 监听重开接受
+                        gameState.channel.subscribe('restart_accept', handleRestartAccept);
+                        
+                        // 监听重开拒绝
+                        gameState.channel.subscribe('restart_reject', handleRestartReject);
+                        
+                        // 监听悔棋请求
+                        gameState.channel.subscribe('undo_request', handleUndoRequest);
+                        
+                        // 监听悔棋接受
+                        gameState.channel.subscribe('undo_accept', handleUndoAccept);
+                        
+                        // 监听悔棋拒绝
+                        gameState.channel.subscribe('undo_reject', handleUndoReject);
+                    });
+                    
+                    // 频道连接失败
+                    gameState.channel.on('failed', (err) => {
+                        showToast(`房间连接失败: ${err.message}`, 'error');
+                        console.error('频道连接失败:', err);
+                    });
+                });
+                
+                // Ably连接失败
+                gameState.ably.connection.on('failed', (error) => {
+                    showToast(`服务器连接失败: ${error.reason}`, 'error');
+                    ui.status.textContent = '服务器连接失败';
+                    console.error('Ably连接失败:', error);
+                });
+                
+                // Ably断开连接
+                gameState.ably.connection.on('disconnected', () => {
+                    showToast('与服务器断开连接', 'warning');
+                    ui.status.textContent = '已断开连接';
+                    setGameButtonsDisabled(true);
+                });
+                
+            } catch (error) {
+                console.error('初始化游戏失败:', error);
+                showToast(`初始化失败: ${error.message}`, 'error');
+                
+                // 重试初始化
+                if (gameState.libraryLoadAttempts < gameState.maxLoadAttempts) {
+                    gameState.libraryLoadAttempts++;
+                    ui.libraryStatus.textContent = `加载失败，正在重试 (${gameState.libraryLoadAttempts}/${gameState.maxLoadAttempts})...`;
+                    setTimeout(initGame, 2000);
+                } else {
+                    ui.libraryStatus.textContent = '加载失败，请刷新页面重试';
+                    showToast('游戏组件加载失败，请刷新页面', 'error');
+                }
+            }
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 检查API密钥配置
+            if (ABLY_API_KEY === 'YOUR_ABLY_API_KEY_HERE') {
+                showToast('请先设置Ably API密钥', 'error');
+                ui.status.textContent = '配置错误: Ably API密钥未设置';
+                return;
+            }
+            
+            // 绑定事件处理函数
+            ui.leaveBtn.addEventListener('click', leaveRoom);
+            ui.restartBtn.addEventListener('click', requestRestart);
+            ui.undoBtn.addEventListener('click', requestUndo);
+            ui.roomIdDisplay.addEventListener('click', copyRoomId);
+            
+            // 开始初始化游戏
+            initGame();
+            
+            // 设置超时检查，确保不会无限等待
+            setTimeout(() => {
+                if (!gameState.game && gameState.libraryLoadAttempts >= gameState.maxLoadAttempts) {
+                    ui.libraryStatus.textContent = '加载超时，请刷新页面重试';
+                    showToast('游戏组件加载超时，请刷新页面', 'error');
+                }
+            }, 15000);
+        });
+    </script>
+</body>
+</html>

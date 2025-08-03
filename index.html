@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>中国象棋 - 创建/加入房间</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #c43c2e;
+            --secondary-color: #d9b382;
+            --dark-bg: #2a211c;
+            --light-bg: #f5f0e5;
+            --border-color: #8c5e3c;
+            --text-dark: #3c2a1e;
+            --text-light: #f8f3e6;
+            --shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            --transition: all 0.3s ease;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: 'Microsoft YaHei', 'Heiti SC', 'SimSun', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #d9b382 0%, #8c5e3c 100%);
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%238c5e3c" opacity="0.1"/><path d="M0,0 Q50,10 100,0 T100,100 Q50,90 0,100 T0,0 Z" fill="%23d9b382" opacity="0.1"/></svg>');
+            color: var(--text-dark);
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .lobby-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 500px;
+            width: 100%;
+            background: var(--dark-bg);
+            padding: 40px 30px;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            border: 3px solid var(--border-color);
+            position: relative;
+            z-index: 2;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .game-title {
+            color: white;
+            font-size: clamp(1.8rem, 5vw, 2.8rem);
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            letter-spacing: 4px;
+            margin-bottom: 15px;
+        }
+        .game-subtitle {
+            color: var(--secondary-color);
+            font-size: clamp(0.9rem, 3vw, 1.2rem);
+            max-width: 400px;
+            line-height: 1.6;
+        }
+        .panel-header {
+            color: var(--text-light);
+            font-size: clamp(1.4rem, 4vw, 1.8rem);
+            margin-bottom: 25px;
+            font-weight: 600;
+            position: relative;
+            text-align: center;
+            width: 100%;
+        }
+        .panel-header:after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 3px;
+            background: var(--primary-color);
+            border-radius: 3px;
+        }
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+        }
+        button {
+            padding: 16px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .btn-large {
+            padding: 18px;
+        }
+        #create-room-btn, #join-room-btn {
+            color: white;
+        }
+        #create-room-btn { 
+            background: linear-gradient(to bottom, var(--primary-color), #a33025); 
+            margin-top: 10px;
+        }
+        #create-room-btn:hover:not(:disabled) { 
+            background: linear-gradient(to bottom, #d14535, #8a2920); 
+            transform: translateY(-3px); 
+            box-shadow: 0 6px 15px rgba(196, 60, 46, 0.4); 
+        }
+        #join-room-btn { 
+            background: linear-gradient(to bottom, #388e3c, #2e7d32); 
+        }
+        #join-room-btn:hover:not(:disabled) { 
+            background: linear-gradient(to bottom, #4caf50, #388e3c); 
+            transform: translateY(-3px); 
+            box-shadow: 0 6px 15px rgba(56, 142, 60, 0.4); 
+        }
+        button:disabled {
+            background: #9e9e9e;
+            cursor: not-allowed;
+            opacity: 0.7;
+            transform: none;
+            box-shadow: none;
+        }
+        .input-group {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        input {
+            width: 100%;
+            padding: 16px;
+            margin: 8px 0;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 1.1rem;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        input::placeholder { 
+            color: #bbb; 
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(196, 60, 46, 0.3);
+        }
+        .input-hint {
+            color: #bbb;
+            font-size: 0.9rem;
+            text-align: right;
+            margin-top: -5px;
+            margin-bottom: 15px;
+        }
+        .chess-piece {
+            font-size: 2.5rem;
+            margin: 0 5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .red-piece {
+            color: #c43c2e;
+        }
+        .black-piece {
+            color: #333;
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translate(-50%, 10px);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .hidden { 
+            display: none !important; 
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .logo {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 25px;
+        }
+        .logo-icon {
+            font-size: 4rem;
+            color: var(--primary-color);
+            text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        /* 响应式优化 */
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            .lobby-container {
+                padding: 30px 20px;
+            }
+            .game-title {
+                font-size: 2.2rem;
+            }
+            .panel-header {
+                font-size: 1.6rem;
+            }
+            button, input {
+                padding: 14px;
+                font-size: 1.1rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            .lobby-container {
+                padding: 20px 15px;
+            }
+            .game-title {
+                font-size: 1.8rem;
+            }
+            .panel-header {
+                font-size: 1.4rem;
+            }
+            .game-subtitle {
+                font-size: 1rem;
+            }
+            .logo-icon {
+                font-size: 3rem;
+            }
+            button, input {
+                padding: 16px;
+                font-size: 1.2rem;
+            }
+        }
+        
+        @media (max-width: 360px) {
+            .lobby-container {
+                padding: 15px;
+            }
+            button, input {
+                padding: 14px;
+                font-size: 1.1rem;
+            }
+        }
+        
+        @media (orientation: landscape) and (max-height: 500px) {
+            body {
+                padding: 10px;
+            }
+            .lobby-container {
+                padding: 15px;
+                max-width: 90%;
+            }
+            .btn-group {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            #create-room-btn, #join-room-btn {
+                flex: 1 1 45%;
+            }
+            .input-group {
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="lobby-container">
+        <div class="logo">
+            <i class="fas fa-chess-rook logo-icon"></i>
+        </div>
+        <header>
+            <h1 class="game-title">中国象棋</h1>
+            <p class="game-subtitle">创建房间或输入房间码加入游戏，与好友在线对弈</p>
+        </header>
+        
+        <div class="panel-header">游戏大厅</div>
+        
+        <div class="btn-group">
+            <button id="create-room-btn" class="btn-large">
+                <span id="create-loading" class="loading hidden"></span>
+                <i class="fas fa-plus-circle"></i> 创建新房间
+            </button>
+            
+            <div class="input-group">
+                <input type="text" id="room-id-input" placeholder="输入房间码" maxlength="15" autocapitalize="off" autocorrect="off" spellcheck="false">
+                <div class="input-hint">
+                    <span id="input-length">0/15</span>
+                </div>
+            </div>
+            
+            <button id="join-room-btn">
+                <span id="join-loading" class="loading hidden"></span>
+                <i class="fas fa-sign-in-alt"></i> 加入房间
+            </button>
+        </div>
+        
+        <div class="chess-pieces" style="margin-top: 30px; text-align: center;">
+            <i class="fas fa-chess-rook chess-piece red-piece"></i>
+            <i class="fas fa-chess-knight chess-piece red-piece"></i>
+            <i class="fas fa-chess-king chess-piece red-piece"></i>
+            <i class="fas fa-chess-queen chess-piece black-piece"></i>
+            <i class="fas fa-chess-bishop chess-piece black-piece"></i>
+            <i class="fas fa-chess-pawn chess-piece black-piece"></i>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast"></div>
+    
+    <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
+    <script>
+        // 页面元素引用
+        const ui = {
+            createBtn: document.getElementById('create-room-btn'),
+            joinBtn: document.getElementById('join-room-btn'),
+            roomIdInput: document.getElementById('room-id-input'),
+            createLoading: document.getElementById('create-loading'),
+            joinLoading: document.getElementById('join-loading'),
+            toast: document.getElementById('toast'),
+            inputLength: document.getElementById('input-length'),
+        };
+        
+        // Ably API 配置
+        const ABLY_API_KEY = 'nc5NGw.wSmsXg:SMs5pD5aJ4hGMvNZnd7pJp2lYS2X1iCmWm_yeLx_pkk';
+        let ably = null;
+        
+        // 显示提示消息
+        function showToast(message, type = 'info') {
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+            ui.toast.innerHTML = `<i class="fas ${icons[type]}"></i> ${message}`;
+            ui.toast.className = 'toast show';
+            
+            setTimeout(() => {
+                ui.toast.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 禁用/启用大厅控制按钮
+        function setLobbyControlsDisabled(disabled) {
+            ui.createBtn.disabled = disabled;
+            ui.joinBtn.disabled = disabled;
+            ui.roomIdInput.disabled = disabled;
+            
+            if (disabled) {
+                ui.createLoading.classList.remove('hidden');
+                ui.joinLoading.classList.remove('hidden');
+            } else {
+                ui.createLoading.classList.add('hidden');
+                ui.joinLoading.classList.add('hidden');
+            }
+        }
+        
+        // 创建房间
+        function createRoom() {
+            setLobbyControlsDisabled(true);
+            showToast('正在创建房间...', 'info');
+            
+            // 生成唯一房间码（6位字母数字组合）
+            const roomId = generateRoomId();
+            
+            // 验证Ably连接
+            if (!ably || ably.connection.state !== 'connected') {
+                showToast('服务器连接失败，请重试', 'error');
+                setLobbyControlsDisabled(false);
+                return;
+            }
+            
+            // 跳转到游戏页面，创建者为红方（先手）
+            setTimeout(() => {
+                window.location.href = `game.html?roomId=${roomId}&playerColor=w`;
+            }, 800);
+        }
+        
+        // 生成房间码
+        function generateRoomId() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let roomId = '';
+            for (let i = 0; i < 6; i++) {
+                roomId += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return roomId;
+        }
+        
+        // 加入房间
+        function joinRoom() {
+            let roomId = ui.roomIdInput.value.trim();
+            if (!roomId) {
+                showToast('请输入有效的房间码', 'warning');
+                return;
+            }
+            
+            if (roomId.length < 4) {
+                showToast('房间码至少需要4个字符', 'warning');
+                return;
+            }
+            
+            setLobbyControlsDisabled(true);
+            showToast('正在加入房间...', 'info');
+            
+            // 验证Ably连接
+            if (!ably || ably.connection.state !== 'connected') {
+                showToast('服务器连接失败，请重试', 'error');
+                setLobbyControlsDisabled(false);
+                return;
+            }
+            
+            // 跳转到游戏页面，加入者为黑方（后手）
+            setTimeout(() => {
+                window.location.href = `game.html?roomId=${roomId}&playerColor=b`;
+            }, 800);
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 检查API密钥配置
+            if (ABLY_API_KEY === 'YOUR_ABLY_API_KEY_HERE') {
+                showToast('请先设置Ably API密钥', 'error');
+                return;
+            }
+            
+            // 初始化Ably连接
+            try {
+                ably = new Ably.Realtime({ 
+                    key: ABLY_API_KEY,
+                    autoConnect: true
+                });
+                
+                // 监听连接状态
+                ably.connection.on('connected', () => {
+                    showToast('已连接到游戏服务器', 'success');
+                });
+                
+                ably.connection.on('failed', (error) => {
+                    showToast(`服务器连接失败: ${error.reason}`, 'error');
+                    setLobbyControlsDisabled(false);
+                });
+                
+                ably.connection.on('disconnected', () => {
+                    showToast('与服务器断开连接', 'warning');
+                });
+            } catch (error) {
+                showToast(`初始化连接失败: ${error.message}`, 'error');
+                console.error('Ably初始化错误:', error);
+            }
+            
+            // 绑定按钮事件
+            ui.createBtn.addEventListener('click', createRoom);
+            ui.joinBtn.addEventListener('click', joinRoom);
+            
+            // 监听输入框变化
+            ui.roomIdInput.addEventListener('input', function() {
+                // 只允许字母和数字
+                this.value = this.value.replace(/[^a-zA-Z0-9]/g, '');
+                ui.inputLength.textContent = `${this.value.length}/${this.maxLength}`;
+            });
+            
+            // 支持按Enter键加入房间
+            ui.roomIdInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    joinRoom();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
